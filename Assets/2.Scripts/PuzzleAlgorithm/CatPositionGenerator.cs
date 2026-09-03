@@ -6,17 +6,28 @@ public class CatPositionGenerator : MonoBehaviour
 {
     int totalRowCount;
 
-    // 0 : °í¾çÀÌ À§Ä¡ °¡´É
-    // 1 ÀÌ»ó : °í¾çÀÌ À§Ä¡ ºÒ°¡´É
-    // -1 (CatValue) : °í¾çÀÌ
+    // 0 : ê³ ì–‘ì´ ìœ„ì¹˜ ê°€ëŠ¥
+    // 1 ì´ìƒ : ê³ ì–‘ì´ ìœ„ì¹˜ ë¶ˆê°€ëŠ¥
+    // -1 (CatValue) : ê³ ì–‘ì´
     int[,] unavailableCount;
     const int CatValue = -1;
 
-    // ÇöÀç rowÀÇ ¹èÄ¡°¡´ÉÇÑ °í¾çÀÌ À§Ä¡
+    // í˜„ì¬ rowì˜ ë°°ì¹˜ê°€ëŠ¥í•œ ê³ ì–‘ì´ ìœ„ì¹˜
     List<int> columnIndexCandidates;
-    //// ÀÌÀü °í¾çÀÌ À§Ä¡ ¼±ÅÃÀÌ Àß¸øµÅ¼­ ¹éÆ®·¡Å·ÇÏ´Â °æ¿ì, ÇÇÇØ¾ßÇÏ´Â °í¾çÀÌ À§Ä¡
-    ///// TODO) ÃÖ»óÀ§ Row¿¡¼­ º¯°æµÇ´Â °æ¿ì ÃÊ±âÈ­ µÇ¾î¾ßÇÔ. << ¹æ¹ı °í¹Î(ÇöÀç Àç±Í ÄÚµå¿¡¼­´Â ³»°¡ ÃÖ»óÀ§¿¡¼­ º¯°æµÇ´ÂÁö ¾Ë ¼ö ¾øÀ½)
-    //List<Vector2Int> failedCandidates;
+
+    // ì´ì „ ê³ ì–‘ì´ ìœ„ì¹˜ ì„ íƒì´ ì˜ëª»ë˜ì–´ ë°±íŠ¸ë˜í‚¹í•˜ëŠ” ê²½ìš°,
+    // í˜„ì¬ íƒìƒ‰ ê²½ë¡œì—ì„œ ì´ë¯¸ ì‹œë„í–ˆì§€ë§Œ ì´í›„ Row ë°°ì¹˜ì— ì‹¤íŒ¨í•œ í›„ë³´ì˜ Columnì„ ì €ì¥
+    // rowIndex = rì˜ ê³ ì–‘ì´ ìœ„ì¹˜ê°€ ë³€ê²½ë˜ë©´ í•˜ìœ„ Row(r+1 ~ N-1)ì˜ failedCandidates ì´ˆê¸°í™” í•„ìš”
+    //
+    // [ì˜ˆì‹œ - 4x4 board]
+    // -1   2   2   2
+    //  2   2  -1   1
+    //  1   1   1   1  â† rowIndex 2ì—ì„œ ë°°ì¹˜ ë¶ˆê°€ëŠ¥
+    //  1   0   1   0
+    //
+    // â†’ rowIndex 1ì˜ ê³ ì–‘ì´ ìœ„ì¹˜(-1)ë¥¼ failedCandidatesì— ì €ì¥í•˜ê³ ,
+    //   rowIndex 1ì—ì„œ ë‹¤ë¥¸ ìœ„ì¹˜ë¡œ ë³€ê²½í•˜ì—¬ ë‹¤ì‹œ íƒìƒ‰
+    List<int>[] failedCandidates;
 
 
     public List<Vector2Int> Generate(int catCount)
@@ -24,6 +35,9 @@ public class CatPositionGenerator : MonoBehaviour
         totalRowCount = catCount;
 
         unavailableCount = new int[catCount, catCount];
+        failedCandidates = new List<int>[catCount];
+        for (int i = 0; i < failedCandidates.Length; i++)
+            failedCandidates[i] = new List<int>();
 
         DecideCatInRow(0);
 
@@ -31,53 +45,58 @@ public class CatPositionGenerator : MonoBehaviour
         return ExtractCatPositions();
     }
 
-    // ¾ÆÀÌµğ¾î
-    // Á¦ÀÏ À§ rowºÎÅÍ ¹èÄ¡ °¡´ÉÇÑ À§Ä¡ Áß ¹«ÀÛÀ§·Î °í¾çÀÌ ¹èÄ¡
-    // ´ÙÀ½ row¿¡¼­ ¹İº¹(Àç±Í)ÇÏµÇ, ¹èÄ¡ ºÒ°¡´ÉÇÏ¸é ÀÌÀü rowÀÇ ¹èÄ¡µÈ °í¾çÀÌ¸¦ ´Ù¸¥ À§Ä¡·Î º¯°æ
-    // ¸ğµç row¿¡¼­ ¹èÄ¡ÇÏ¸é Á¾·á
+    // ì•„ì´ë””ì–´
+    // ì œì¼ ìœ„ rowë¶€í„° ë°°ì¹˜ ê°€ëŠ¥í•œ ìœ„ì¹˜ ì¤‘ ë¬´ì‘ìœ„ë¡œ ê³ ì–‘ì´ ë°°ì¹˜
+    // ë‹¤ìŒ rowì—ì„œ ë°˜ë³µ(ì¬ê·€)í•˜ë˜, í¼ì¦ ê·œì¹™ì— ë§ê²Œ ë°°ì¹˜ê°€ ë¶ˆê°€ëŠ¥í•˜ë©´ ì´ì „ rowì˜ ë°°ì¹˜ëœ ê³ ì–‘ì´ë¥¼ ë‹¤ë¥¸ ìœ„ì¹˜ë¡œ ë³€ê²½
+        // ì´ë•Œ ë°°ì¹˜ ë¶ˆê°€ëŠ¥í•œ ìƒìœ„ ë ˆë²¨ ê³ ì–‘ì´ ìœ„ì¹˜ë¥¼ failedCandidatesì— ë”°ë¡œ ê´€ë¦¬í•˜ë©°, ì´ ìœ„ì¹˜ë“¤ë„ ê³ ì–‘ì´ ìœ„ì¹˜ ì„ íƒ ì‹œ í›„ë³´ì—ì„œ ì œì™¸
+        // failedCandidatesëŠ” ìƒìœ„ row ê³ ì–‘ì´ ìœ„ì¹˜ê°€ ë³€ê²½(ì„ íƒ)ë  ë•Œ í•˜ìœ„ rowì˜ failedCandidates ì´ˆê¸°í™”
+    // ëª¨ë“  rowì—ì„œ ë°°ì¹˜í•˜ë©´ ì¢…ë£Œ
     void DecideCatInRow(int rowIndex)
     {
-        // ¹èÄ¡ °¡´É -> ¹èÄ¡ÇÏ°í Àç±Í
+        // ë°°ì¹˜ ê°€ëŠ¥ -> ë°°ì¹˜í•˜ê³  ì¬ê·€
         if (TryExtractCandidates(rowIndex))
         {
-            // ¹«ÀÛÀ§ ¼±ÅÃ
+            // ë¬´ì‘ìœ„ ì„ íƒ
             int randomIndex = Random.Range(0, columnIndexCandidates.Count);
             int columnIndex = columnIndexCandidates[randomIndex];
 
-            // ¹èÄ¡
+            // ë°°ì¹˜
             PlaceCat(new Vector2Int(columnIndex, rowIndex));
+            // í•˜ìœ„ Rowë“¤ FailedCandidates ì´ˆê¸°í™”
+            ClearLowerRowFailedCandidates(rowIndex);
 
-            // ¸ğµç °í¾çÀÌ ¹èÄ¡ÇÏ¸é Àç±Í Á¾·á
+            // ëª¨ë“  ê³ ì–‘ì´ ë°°ì¹˜í•˜ë©´ ì¬ê·€ ì¢…ë£Œ
             rowIndex++;
             if (rowIndex >= totalRowCount)
                 return;
         }
-        // ¹èÄ¡ ºÒ°¡´É -> ÀÌÀü rowÀÇ ¹èÄ¡µÈ À§Ä¡¸¦ ºÒ°¡´ÉÀ¸·Î ¹Ù²Ù°í ÀÌÀü row·Î Àç±Í
+        // ë°°ì¹˜ ë¶ˆê°€ëŠ¥ -> ì´ì „ rowì˜ ë°°ì¹˜ëœ ìœ„ì¹˜ë¥¼ ë¶ˆê°€ëŠ¥ìœ¼ë¡œ ë°”ê¾¸ê³  ì´ì „ rowë¡œ ì¬ê·€
         else
         {
             rowIndex--;
 
             if (rowIndex < 0)
             {
-                Debug.LogError($"CatPositionGenerator Error :: ¹èÄ¡ ½ÇÆĞ");
+                Debug.LogError($"CatPositionGenerator Error :: ë°°ì¹˜ ì‹¤íŒ¨");
                 return;
             }
 
-            // ÀÌÀü row °í¾çÀÌ Á¦°Å
+            // ì´ì „ row ê³ ì–‘ì´ ì œê±°
             if (TryGetCatPositionInRow(rowIndex, out Vector2Int lastRowCatPos))
             {
+                // ë°°ì¹˜ ì œê±°
                 RemoveCat(lastRowCatPos);
-                // ÀÌÀü row °í¾çÀÌ À§Ä¡¸¦ ¹èÄ¡ ºÒ°¡´ÉÇÑ »óÅÂ·Î º¯°æ
-                //failedCandidates.Add(lastRowCatPos);
+                // ì´ì „ row ê³ ì–‘ì´ ìœ„ì¹˜ë¥¼ failedCandidateì— ì¶”ê°€
+                AddFailedCandidate(lastRowCatPos);
             }
             else
             {
-                Debug.LogError($"CatPositionGenerator Error :: ÀÌÀü RowÀÇ °í¾çÀÌ Ã£±â ½ÇÆĞ");
+                Debug.LogError($"CatPositionGenerator Error :: ì´ì „ Row({rowIndex})ì˜ ê³ ì–‘ì´ ì°¾ê¸° ì‹¤íŒ¨");
                 return;
             }
         }
 
-        // Àç±Í
+        // ì¬ê·€
         DecideCatInRow(rowIndex);
     }
 
@@ -100,8 +119,15 @@ public class CatPositionGenerator : MonoBehaviour
         columnIndexCandidates = new List<int>();
         for (int x = 0; x < unavailableCount.GetLength(1); x++)
         {
-            if (unavailableCount[rowIndex, x] == 0)
-                columnIndexCandidates.Add(x);
+            // ê·œì¹™ì— ì˜í•´ ë°°ì¹˜ ë¶ˆê°€ëŠ¥í•œ ìœ„ì¹˜ ì œì™¸
+            if (unavailableCount[rowIndex, x] != 0)
+                continue;
+
+            // failedCandidatesì— ì˜í•´ ë°°ì¹˜ ë¶ˆê°€ëŠ¥í•œ ìœ„ì¹˜ ì œì™¸
+            if (failedCandidates[rowIndex].Contains(x))
+                continue;
+
+            columnIndexCandidates.Add(x);
         }
         return columnIndexCandidates.Count > 0;
     }
@@ -110,25 +136,25 @@ public class CatPositionGenerator : MonoBehaviour
     {
         if (unavailableCount[position.y, position.x] == CatValue)
         {
-            Debug.LogError($"{position} ÁÂÇ¥¿¡ ÀÌ¹Ì °í¾çÀÌ ¹èÄ¡µÇ¾ú´Âµ¥ ´Ù½Ã ¹èÄ¡¸¦ ½ÃµµÇØ¼­ ¹«½ÃÇÔ");
+            Debug.LogError($"{position} ì¢Œí‘œì— ì´ë¯¸ ê³ ì–‘ì´ ë°°ì¹˜ë˜ì—ˆëŠ”ë° ë‹¤ì‹œ ë°°ì¹˜ë¥¼ ì‹œë„í•´ì„œ ë¬´ì‹œí•¨");
             return;
         }
 
         unavailableCount[position.y, position.x] = CatValue;
 
-        // Column ±ÔÄ¢ Àû¿ë
+        // Column ê·œì¹™ ì ìš©
         for (int y = 0; y < totalRowCount; y++)
         {
             if (y == position.y) continue;
             unavailableCount[y, position.x]++;
         }
-        // Row ±ÔÄ¢ Àû¿ë
+        // Row ê·œì¹™ ì ìš©
         for (int x = 0; x < totalRowCount; x++)
         {   
             if (x == position.x) continue;
             unavailableCount[position.y, x]++;
         }
-        // ÀÎÁ¢(´ë°¢ 4Ä­) ±ÔÄ¢ Àû¿ë
+        // ì¸ì ‘(ëŒ€ê° 4ì¹¸) ê·œì¹™ ì ìš©
         if (position.x - 1 >= 0)
         {
             if (position.y - 1 >= 0)
@@ -149,25 +175,25 @@ public class CatPositionGenerator : MonoBehaviour
     {
         if (unavailableCount[position.y, position.x] != CatValue)
         {
-            Debug.LogError($"{position} ÁÂÇ¥¿¡ °í¾çÀÌ°¡ ¾ø´Âµ¥ Á¦°Å¸¦ ½ÃµµÇØ¼­ ¹«½ÃÇÔ");
+            Debug.LogError($"{position} ì¢Œí‘œì— ê³ ì–‘ì´ê°€ ì—†ëŠ”ë° ì œê±°ë¥¼ ì‹œë„í•´ì„œ ë¬´ì‹œí•¨");
             return;
         }
 
         unavailableCount[position.y, position.x] = 0;
 
-        // Column ±ÔÄ¢ Àû¿ë
+        // Column ê·œì¹™ ì ìš©
         for (int y = 0; y < totalRowCount; y++)
         {
             if (y == position.y) continue;
             unavailableCount[y, position.x]--;
         }
-        // Row ±ÔÄ¢ Àû¿ë
+        // Row ê·œì¹™ ì ìš©
         for (int x = 0; x < totalRowCount; x++)
         {
             if (x == position.x) continue;
             unavailableCount[position.y, x]--;
         }
-        // ÀÎÁ¢(´ë°¢ 4Ä­) ±ÔÄ¢ Àû¿ë
+        // ì¸ì ‘(ëŒ€ê° 4ì¹¸) ê·œì¹™ ì ìš©
         if (position.x - 1 >= 0)
         {
             if (position.y - 1 >= 0)
@@ -182,6 +208,16 @@ public class CatPositionGenerator : MonoBehaviour
             if (position.y + 1 < totalRowCount)
                 unavailableCount[position.y + 1, position.x + 1]--;
         }
+    }
+
+    void AddFailedCandidate(Vector2Int position)
+    {
+        failedCandidates[position.y].Add(position.x);
+    }
+    void ClearLowerRowFailedCandidates(int rowIndex)
+    {
+        for (int i = rowIndex + 1; i < failedCandidates.Length; i++)
+            failedCandidates[i].Clear();
     }
 
 
@@ -200,9 +236,9 @@ public class CatPositionGenerator : MonoBehaviour
 
         // Debug
         if (catPositions.Count != totalRowCount)
-            Debug.LogError($"CatPositionGenerator Error :: ¸ñÇ¥ °í¾çÀÌ ¼ö ({totalRowCount}) != »ı¼ºµÈ °í¾çÀÌ ¼ö ({catPositions.Count})");
+            Debug.LogError($"CatPositionGenerator Error :: ëª©í‘œ ê³ ì–‘ì´ ìˆ˜ ({totalRowCount}) != ìƒì„±ëœ ê³ ì–‘ì´ ìˆ˜ ({catPositions.Count})");
         else
-            Debug.Log($"CatPositionGenerator Success :: ¸ñÇ¥ °í¾çÀÌ ¼ö ({totalRowCount}) = »ı¼ºµÈ °í¾çÀÌ ¼ö ({catPositions.Count})");
+            Debug.Log($"CatPositionGenerator Success :: ëª©í‘œ ê³ ì–‘ì´ ìˆ˜ ({totalRowCount}) = ìƒì„±ëœ ê³ ì–‘ì´ ìˆ˜ ({catPositions.Count})");
 
         DebugLog_Result(catPositions);
 
