@@ -15,6 +15,9 @@ public enum TileState
 
 public class Board : MonoBehaviour
 {
+    [SerializeField]
+    CatPositionGenerator catPositionGenerator;
+
     // 정답 보드 : 각 색을 알파벳 소문자로, 고양이는 대문자로 표기
     char[,] answerBoard;
     // 플레이어 보드 : 빈 칸, X 표시, 고양이 찾음 표시
@@ -28,10 +31,26 @@ public class Board : MonoBehaviour
     // 2. 타일 색 결정 후 유일한 정답인지 판별 후 유일한 정답이 아니면 폐기 (규칙1 해결)
     public void InitBoard(int totalcatCount)
     {
+        if (totalcatCount <= 3)
+        {
+            Debug.LogWarning($"Board.InitBoard() Error :: 3x3 이하 크기 퍼즐은 생성할 수 없습니다.");
+            return;
+        }
+
         this.totalCatCount = totalcatCount;
         this.remainingCatCont = totalcatCount;
 
         answerBoard = new char[totalcatCount, totalcatCount];
         playerBoard = new TileState[totalcatCount, totalcatCount];
+
+        if (catPositionGenerator != null)
+        {
+            var catPositions = catPositionGenerator.Generate(totalCatCount);
+
+            if (catPositions == null)
+                Debug.LogError($"Board.InitBoard() Error :: catPositions is null");
+            else if (catPositions.Count != totalCatCount)
+                Debug.LogError($"Board.InitBoard() Error :: catPositions.Count ({catPositions.Count}) != totalCatCount ({totalCatCount})");
+        }
     }
 }

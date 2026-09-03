@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class CatPositionGenerator : MonoBehaviour
 {
+    [Header("Debug Log")]
+    [Tooltip("백트래킹 오류 디버깅 시 필요하면 켜기")]
+    [SerializeField] bool logUnavailableCountOnFailure;
+
     int totalRowCount;
 
     // 0 : 고양이 위치 가능
@@ -65,6 +69,9 @@ public class CatPositionGenerator : MonoBehaviour
             // 하위 Row들 FailedCandidates 초기화
             ClearLowerRowFailedCandidates(rowIndex);
 
+            // Log
+            Debug.Log($"DecideCatInRow({rowIndex}) 배치 성공 :: ({columnIndex},{rowIndex})");
+
             // 모든 고양이 배치하면 재귀 종료
             rowIndex++;
             if (rowIndex >= totalRowCount)
@@ -84,10 +91,18 @@ public class CatPositionGenerator : MonoBehaviour
             // 이전 row 고양이 제거
             if (TryGetCatPositionInRow(rowIndex, out Vector2Int lastRowCatPos))
             {
+                // Log
+                Debug.Log($"DecideCatInRow({rowIndex + 1}) 배치 실패 ::{rowIndex}번 Row로 돌아감");
+                if (logUnavailableCountOnFailure)
+                    DebugLog_UnavailableCount();
+
                 // 배치 제거
                 RemoveCat(lastRowCatPos);
                 // 이전 row 고양이 위치를 failedCandidate에 추가
                 AddFailedCandidate(lastRowCatPos);
+
+                // Log
+                Debug.Log($"failedCandidates[{rowIndex}]: {string.Join(", ", failedCandidates[rowIndex])}");
             }
             else
             {
@@ -252,6 +267,12 @@ public class CatPositionGenerator : MonoBehaviour
             Debug.Log(pos);
         Debug.Log("-------------------------");
         Debug.Log("----[UnavailableCount]----");
+
+        DebugLog_UnavailableCount();
+    }
+
+    void DebugLog_UnavailableCount()
+    {
         StringBuilder sb = new StringBuilder();
 
         for (int y = 0; y < unavailableCount.GetLength(0); y++)
@@ -265,5 +286,4 @@ public class CatPositionGenerator : MonoBehaviour
         Debug.Log(sb.ToString());
         Debug.Log("-------------------------");
     }
-
 }
