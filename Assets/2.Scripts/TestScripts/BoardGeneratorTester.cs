@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class CatPositionGeneratorTester : MonoBehaviour
+public class BoardGeneratorTester : MonoBehaviour
 {
     public Board board;
     public Dropdown catCountDropdown;

@@ -129,7 +129,6 @@ GameObject:
   m_Component:
   - component: {fileID: 15394675}
   - component: {fileID: 15394674}
-  - component: {fileID: 15394676}
   m_Layer: 0
   m_Name: Board
   m_TagString: Untagged
@@ -149,7 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 758e5134644152a4487bf70f1c9721f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Board
-  catPositionGenerator: {fileID: 15394676}
+  boardGenerator: {fileID: 1485280047}
 --- !u!4 &15394675
 Transform:
   m_ObjectHideFlags: 0
@@ -162,21 +161,10 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1485280050}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &15394676
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 15394673}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 16ecd675e3874fe47907d8c29a17c6e8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CatPositionGenerator
 --- !u!1 &78869912
 GameObject:
   m_ObjectHideFlags: 0
@@ -1295,7 +1283,7 @@ GameObject:
   - component: {fileID: 958262897}
   - component: {fileID: 958262896}
   m_Layer: 0
-  m_Name: CatPositionGeneratorTester
+  m_Name: BoardGeneratorTester
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1756,6 +1744,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1294051691}
   m_CullTransparentMesh: 1
+--- !u!1 &1485280046
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1485280050}
+  - component: {fileID: 1485280047}
+  - component: {fileID: 1485280049}
+  - component: {fileID: 1485280048}
+  m_Layer: 0
+  m_Name: BoardGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1485280047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1485280046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2578af2bcbba1154c9b7fa072d452f09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BoardGenerator
+  catPositionGenerator: {fileID: 1485280049}
+  tileColorGenerator: {fileID: 1485280048}
+--- !u!114 &1485280048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1485280046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80fe7818b05066c4eaa4ee40810072e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TileColorGenerator
+  showLog: 0
+--- !u!114 &1485280049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1485280046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16ecd675e3874fe47907d8c29a17c6e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatPositionGenerator
+  showLog: 0
+  logUnavailableCountOnFailure: 0
+--- !u!4 &1485280050
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1485280046}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 15394675}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1699362064
 GameObject:
   m_ObjectHideFlags: 0
@@ -1921,6 +1984,6 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 15394675}
+  - {fileID: 958262897}
   - {fileID: 1151159403}
   - {fileID: 2141595897}
-  - {fileID: 958262897}

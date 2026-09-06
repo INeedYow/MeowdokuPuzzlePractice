@@ -16,7 +16,7 @@ public enum TileState
 public class Board : MonoBehaviour
 {
     [SerializeField]
-    CatPositionGenerator catPositionGenerator;
+    BoardGenerator boardGenerator;
 
     // 정답 보드 : 각 색을 알파벳 소문자로, 고양이는 대문자로 표기
     char[,] answerBoard;
@@ -40,17 +40,14 @@ public class Board : MonoBehaviour
         this.totalCatCount = totalcatCount;
         this.remainingCatCont = totalcatCount;
 
-        answerBoard = new char[totalcatCount, totalcatCount];
-        playerBoard = new TileState[totalcatCount, totalcatCount];
-
-        if (catPositionGenerator != null)
+        if (boardGenerator != null)
         {
-            var catPositions = catPositionGenerator.Generate(totalCatCount);
+            answerBoard = boardGenerator.Generate(totalCatCount);
 
-            if (catPositions == null)
-                Debug.LogError($"Board.InitBoard() Error :: catPositions is null");
-            else if (catPositions.Count != totalCatCount)
-                Debug.LogError($"Board.InitBoard() Error :: catPositions.Count ({catPositions.Count}) != totalCatCount ({totalCatCount})");
+            if (answerBoard == null)
+                Debug.LogError($"Board.InitBoard() Error :: answerBoard is null");
+
+            playerBoard = new TileState[totalcatCount, totalcatCount];
         }
     }
 }

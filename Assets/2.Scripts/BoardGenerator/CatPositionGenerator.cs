@@ -5,6 +5,7 @@ using UnityEngine;
 public class CatPositionGenerator : MonoBehaviour
 {
     [Header("Debug Log")]
+    [SerializeField] bool showLog = true;
     [Tooltip("백트래킹 오류 디버깅 시 필요하면 켜기")]
     [SerializeField] bool logUnavailableCountOnFailure;
 
@@ -45,7 +46,6 @@ public class CatPositionGenerator : MonoBehaviour
 
         DecideCatInRow(0);
 
-        
         return ExtractCatPositions();
     }
 
@@ -70,7 +70,8 @@ public class CatPositionGenerator : MonoBehaviour
             ClearLowerRowFailedCandidates(rowIndex);
 
             // Log
-            Debug.Log($"DecideCatInRow({rowIndex}) 배치 성공 :: ({columnIndex},{rowIndex})");
+            if (showLog)
+                Debug.Log($"DecideCatInRow({rowIndex}) 배치 성공 :: ({columnIndex},{rowIndex})");
 
             // 모든 고양이 배치하면 재귀 종료
             rowIndex++;
@@ -92,7 +93,8 @@ public class CatPositionGenerator : MonoBehaviour
             if (TryGetCatPositionInRow(rowIndex, out Vector2Int lastRowCatPos))
             {
                 // Log
-                Debug.Log($"DecideCatInRow({rowIndex + 1}) 배치 실패 ::{rowIndex}번 Row로 돌아감");
+                if (showLog)
+                    Debug.Log($"DecideCatInRow({rowIndex + 1}) 배치 실패 ::{rowIndex}번 Row로 돌아감");
                 if (logUnavailableCountOnFailure)
                     DebugLog_UnavailableCount();
 
@@ -102,7 +104,8 @@ public class CatPositionGenerator : MonoBehaviour
                 AddFailedCandidate(lastRowCatPos);
 
                 // Log
-                Debug.Log($"failedCandidates[{rowIndex}]: {string.Join(", ", failedCandidates[rowIndex])}");
+                if (showLog)
+                    Debug.Log($"failedCandidates[{rowIndex}]: {string.Join(", ", failedCandidates[rowIndex])}");
             }
             else
             {
@@ -252,7 +255,7 @@ public class CatPositionGenerator : MonoBehaviour
         // Debug
         if (catPositions.Count != totalRowCount)
             Debug.LogError($"CatPositionGenerator Error :: 목표 고양이 수 ({totalRowCount}) != 생성된 고양이 수 ({catPositions.Count})");
-        else
+        else if (showLog)
             Debug.Log($"CatPositionGenerator Success :: 목표 고양이 수 ({totalRowCount}) = 생성된 고양이 수 ({catPositions.Count})");
 
         DebugLog_Result(catPositions);
