@@ -6,6 +6,8 @@ public class TileColorGenerator : MonoBehaviour
 {
     [Header("Debug Log")]
     [SerializeField] bool showLog = true;
+    [Tooltip("타일 색 1차 결정 후 결과 로그")]
+    [SerializeField] bool logBoardAfterDecideColorFromCat;
 
     int totalCatCount;
 
@@ -35,11 +37,19 @@ public class TileColorGenerator : MonoBehaviour
             board[pos.y, pos.x] = char.ToUpper(GetAlphabetFromIndex(i));
         }
 
+        // 1차로 고양이 타일부터 퍼져나가면서 색상 결정
         for (int i = 0; i < catPositions.Count; i++)
         {
             DecideColorFromCat(catPositions[i], GetAlphabetFromIndex(i));
         }
 
+        if (logBoardAfterDecideColorFromCat)
+        {
+            Debug.Log("----[색칠 중간 Board 상태 로그]----");
+            DebugLog_Result();
+        }
+
+        // 2차로 남은 타일들 색상 결정
         DecideEmptyTilesColor();
 
         DebugLog_Result();
@@ -110,36 +120,107 @@ public class TileColorGenerator : MonoBehaviour
         return true;
     }
 
+    // 아이디어
+    // 1. 1차로 DecideColorFromCat에서 색이 배치된 후
+    // board를 전체 순회하면서 4방향 인접한 타일 중 색이 결정된 타일이 1개라도 있으면 다음 색 결정 후보로 추가
+    // 2. 다음 색 결정 후보에서 무작위 순서로 뽑아 인접한 타일 색들 중 무작위 선택 (처리 순서가 선택 결과에 영향을 줘서 무작위로)
+        //  .   .   a       << (1,0) -> (0,0) 순서로 결정하면 (1,0)에는 a,b 가능, (0,0)에는 a,b가능
+        //  b   b   .       << (0,0) -> (1,0) 순서로 결정하면 (0,0)에는 b만 가능, (1,0)에는 a,b가능 
+    // 3. 색 미결정 타일이 없을 때까지 1,2번 반복
     void DecideEmptyTilesColor()
     {
-        // Todo
+        while (TryExtractDecidableEmptyTiles(out List<Vector2Int> candidates))
+        {
+            // 인접한 색이 있는 색 미결정 타일 중에서 무작위 선택
+            int randomIndex = Random.Range(0, candidates.Count);
+            Vector2Int candidate = candidates[randomIndex];
+
+            // 인접한 색 중에서 무작위 선택
+            List<char> neighborColors = new List<char>();
+            foreach (var dir in Directions)
+            {
+                Vector2Int neighborPos = candidate + dir;
+                if (TryGetAlphabetAt(neighborPos, out char color))
+                {
+                    neighborColors.Add(color);
+                }
+            }
+
+            randomIndex = Random.Range(0, neighborColors.Count);
+            board[candidate.y, candidate.x] = neighborColors[randomIndex];
+        }
+    }
+
+    bool TryExtractDecidableEmptyTiles(out List<Vector2Int> decidableCandidates)
+    {
+        decidableCandidates = new List<Vector2Int>();
+
+        for (int y = 0; y < board.GetLength(0); y++)
+        {
+            for (int x = 0; x < board.GetLength(1); x++)
+            {
+                if (board[y, x] != DefaultChar)
+                    continue;
+
+                Vector2Int neighborPos = new Vector2Int(x, y);
+                bool hasDecidedNeighborTile = false;
+                foreach (var dir in Directions)
+                {
+                    neighborPos = new Vector2Int(x, y) + dir;
+                    if (TryGetAlphabetAt(neighborPos, out char color)
+                        && color != DefaultChar)
+                    {
+                        hasDecidedNeighborTile = true;
+                        break;
+                    }
+                }
+
+                if (hasDecidedNeighborTile)
+                    decidableCandidates.Add(new Vector2Int(x, y));
+            }
+        }
+
+        return decidableCandidates.Count > 0;
+    }
+    bool IsEmptyTileAt(Vector2Int pos)
+    {
+        if (pos.x < 0 || pos.x >= board.GetLength(1)
+            || pos.y < 0 || pos.y >= board.GetLength(0))
+        {
+            //Debug.LogError($"TileColorGenerator.IsEmptyTileAt() Error :: {pos} 값이 overflow");
+            return false;
+        }
+
+        return board[pos.y, pos.x] == DefaultChar;
     }
 
     char GetAlphabetFromIndex(int index)
     {
         if (index < 0 || index >= MaxAlphabetCount)
         {
-            Debug.LogError($"TileColorGenerator.GetAlphabet() Error :: index {index} 값을 알파벳으로 치환 불가");
+            //Debug.LogError($"TileColorGenerator.GetAlphabet() Error :: index {index} 값을 알파벳으로 치환 불가");
             return default;
         }
 
         return (char)('a' + index);
     }
 
-    char GetAlphabetAt(Vector2Int pos)
+    bool TryGetAlphabetAt(Vector2Int pos, out char alphabet)
     {
+        alphabet = DefaultChar;
         if (pos.x < 0 || pos.x >= board.GetLength(1)
             || pos.y < 0 || pos.y >= board.GetLength(0))
         {
-            Debug.LogError($"TileColorGenerator.GetAlphabetAt() Error :: {pos} 값이 overflow");
-            return default;
+            //Debug.LogError($"TileColorGenerator.GetAlphabetAt() Error :: {pos} 값이 overflow");
+            return false;
         }
-        return char.ToLower(board[pos.y, pos.x]);
+        alphabet = char.ToLower(board[pos.y, pos.x]);
+        return true;  
     }
 
     void DebugLog_Result()
     {
-        Debug.Log("----[(Temp)Board]----");
+        Debug.Log("----[Board]----");
 
         StringBuilder sb = new StringBuilder();
 

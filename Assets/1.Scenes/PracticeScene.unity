@@ -1790,6 +1790,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TileColorGenerator
   showLog: 0
+  logBoardAfterDecideColorFromCat: 1
 --- !u!114 &1485280049
 MonoBehaviour:
   m_ObjectHideFlags: 0
