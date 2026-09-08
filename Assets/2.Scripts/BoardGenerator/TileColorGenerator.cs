@@ -17,14 +17,7 @@ public class TileColorGenerator : MonoBehaviour
     // \0 (DefaultChar) : 아직 결정하지 않은 타일
     char[,] board;
     const char DefaultChar = '\0';
-    const int MaxAlphabetCount = 26;
 
-
-    static readonly Vector2Int Up      = new Vector2Int(0, 1);
-    static readonly Vector2Int Down    = new Vector2Int(0, -1);
-    static readonly Vector2Int Left    = new Vector2Int(-1, 0);
-    static readonly Vector2Int Right   = new Vector2Int(1, 0);
-    static readonly Vector2Int[] Directions = { Up, Down, Left, Right };
 
     public char[,] Generate(int catCount, List<Vector2Int> catPositions)
     {
@@ -34,13 +27,13 @@ public class TileColorGenerator : MonoBehaviour
         for (int i = 0; i < catPositions.Count; i++)
         {
             Vector2Int pos = catPositions[i];
-            board[pos.y, pos.x] = char.ToUpper(GetAlphabetFromIndex(i));
+            board[pos.y, pos.x] = char.ToUpper(RegionUtility.GetIdFromIndex(i));
         }
 
         // 1차로 고양이 타일부터 퍼져나가면서 색상 결정
         for (int i = 0; i < catPositions.Count; i++)
         {
-            DecideColorFromCat(catPositions[i], GetAlphabetFromIndex(i));
+            DecideColorFromCat(catPositions[i], RegionUtility.GetIdFromIndex(i));
         }
 
         if (logBoardAfterDecideColorFromCat)
@@ -67,7 +60,7 @@ public class TileColorGenerator : MonoBehaviour
         bool[,] decided = new bool[totalCatCount, totalCatCount];
         List<Vector2Int> candidates = new List<Vector2Int>();
 
-        foreach(var dir in Directions)
+        foreach(var dir in DirectionUtility.Directions4)
             candidates.Add(catPosition + dir);
 
         // Log
@@ -87,7 +80,7 @@ public class TileColorGenerator : MonoBehaviour
                 if (showLog)
                     Debug.Log($"DecideColor : {candidate} 타일 '{alphabet}'로 결정");
 
-                foreach (var dir in Directions)
+                foreach (var dir in DirectionUtility.Directions4)
                     candidates.Add(candidate + dir);
             }
         }
@@ -137,7 +130,7 @@ public class TileColorGenerator : MonoBehaviour
 
             // 인접한 색 중에서 무작위 선택
             List<char> neighborColors = new List<char>();
-            foreach (var dir in Directions)
+            foreach (var dir in DirectionUtility.Directions4)
             {
                 Vector2Int neighborPos = candidate + dir;
                 if (TryGetAlphabetAt(neighborPos, out char color))
@@ -164,7 +157,7 @@ public class TileColorGenerator : MonoBehaviour
 
                 Vector2Int neighborPos = new Vector2Int(x, y);
                 bool hasDecidedNeighborTile = false;
-                foreach (var dir in Directions)
+                foreach (var dir in DirectionUtility.Directions4)
                 {
                     neighborPos = new Vector2Int(x, y) + dir;
                     if (TryGetAlphabetAt(neighborPos, out char color)
@@ -192,17 +185,6 @@ public class TileColorGenerator : MonoBehaviour
         }
 
         return board[pos.y, pos.x] == DefaultChar;
-    }
-
-    char GetAlphabetFromIndex(int index)
-    {
-        if (index < 0 || index >= MaxAlphabetCount)
-        {
-            //Debug.LogError($"TileColorGenerator.GetAlphabet() Error :: index {index} 값을 알파벳으로 치환 불가");
-            return default;
-        }
-
-        return (char)('a' + index);
     }
 
     bool TryGetAlphabetAt(Vector2Int pos, out char alphabet)

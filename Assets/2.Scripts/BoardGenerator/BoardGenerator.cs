@@ -5,6 +5,7 @@ public class BoardGenerator : MonoBehaviour
     [Header("")]
     [SerializeField] CatPositionGenerator catPositionGenerator;
     [SerializeField] TileColorGenerator tileColorGenerator;
+    [SerializeField] BoardSolver boardSolver;
 
     public char[,] Generate(int catCount)
     {
@@ -25,6 +26,14 @@ public class BoardGenerator : MonoBehaviour
 
         // 타일 색상 결정
         var newBoard = tileColorGenerator.Generate(catCount, catPositions);
+
+        if (boardSolver == null)
+        {
+            Debug.LogError($"BoardGenerate Error :: boardSolver is null");
+            return null;
+        }
+
+        boardSolver.Solve(newBoard, catCount);
 
         return newBoard;
     }
