@@ -4,6 +4,12 @@ using UnityEngine;
 
 public class BoardSolver : MonoBehaviour
 {
+    [Header("Debug Log")]
+    [SerializeField] bool logOnFindSingleTileRegion = true;
+    [SerializeField] bool logOnFindSingleCandidateInLine = true;
+    [SerializeField] bool logOnFindSingleRegionInLine = true;
+    [SerializeField] bool logOnFindSingleLineRegion = true;
+    
     char[,] board;
     int totalCatCount;
 
@@ -14,9 +20,9 @@ public class BoardSolver : MonoBehaviour
     // 1. 1칸짜리 영역 확정 : 한 영역의 후보가 1개
     // 2. 1줄에 후보가 1개뿐인 경우 확정 : 한 줄에 후보가 1개
     // 3. 1줄에 1개 영역만 존재 : 해당 줄이 아닌 곳에 존재하는 후보들 제거
-    // 4. 1개의 영역이 1줄 안에 존재 : 해당 줄에 다른 영역 후보들 제거
+    // 4. 1개의 영역이 1줄에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
     // 5. n개의 줄에 n개의 영역만 존재 : 해당 줄이 아닌 곳에 존재하는 후보들 제거
-    // 6. n개의 영역이 n개의 줄 안에 존재 : 해당 줄에 다른 영역 후보들 제거
+    // 6. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
     // 7. 모순 위치 찾기 : 특정 타일에 고양이가 있을 때 모순인지 확인
     // 1->7로 진행하며, 변경점(후보 제거 등)이 있으면 1로 돌아가서 반복 진행
     public void Solve(char[,] board, int catCount)
@@ -43,8 +49,10 @@ public class BoardSolver : MonoBehaviour
         }
 
         bool shouldExit = false;
+        int repeatCount = 0;
         do 
-        { 
+        {
+            repeatCount++;
             // 1. 1칸짜리 영역 확정
             if (TryFindSingleTileRegion()) continue;
 
@@ -54,19 +62,31 @@ public class BoardSolver : MonoBehaviour
             // 3. 1줄에 1개 영역만 존재
             if (TryFindSingleRegionInLine()) continue;
 
-            // 4. 1개의 영역이 1줄 안에 존재
+            // 4. 1개의 영역이 1줄에 모두 존재
             if (TryFindSingleLineRegion()) continue;
 
             // 5. n개의 줄에 n개의 영역만 존재
             if (TryFindMultiRegionInLines()) continue;
 
-            // 6. n개의 영역이 n개의 줄 안에 존재
+            // 6. n개의 영역이 n개의 줄 안에 모두 존재
             if (TryFindMultiLineRegion()) continue;
 
             // 7. 모순 위치 찾기
             SolveByAssumption();
 
-            shouldExit = (foundCatPositions.Count == catCount);
+            //shouldExit = (foundCatPositions.Count == catCount);
+            if (foundCatPositions.Count == catCount)
+            {
+                Debug.Log($"Solver :: 고양이 모두 찾아서 종료");
+                foreach (var pos in foundCatPositions)
+                    Debug.Log($"{pos}");
+                shouldExit = true;
+            }
+            if (repeatCount > 100)
+            {
+                Debug.Log($"Solver :: 반복 횟수 초과로 강제 종료");
+                shouldExit = true;
+            }
         } while (!shouldExit);
     }
 
@@ -77,13 +97,16 @@ public class BoardSolver : MonoBehaviour
     {
         bool hasFound = false;
 
-        for (int i = 0; i < candidatesPerRegion.Length; i++)
+        for (int region = 0; region < candidatesPerRegion.Length; region++)
         {
-            if (candidatesPerRegion[i].Count == 1)
+            if (candidatesPerRegion[region].Count == 1)
             {
-                Vector2Int catPos = candidatesPerRegion[i][0];
+                Vector2Int catPos = candidatesPerRegion[region][0];
                 ConfirmCatPosition(catPos);
                 hasFound = true;
+
+                if (logOnFindSingleTileRegion)
+                    Debug.Log($"1. {catPos}에 {RegionUtility.GetIdFromIndex(region)} 1칸 영역 찾음");
             }
         }
         return hasFound;
@@ -114,20 +137,26 @@ public class BoardSolver : MonoBehaviour
         }
         
         // 각 row, column에 후보가 1개라면 확정
-        foreach (var candidateList in candidatesInRow)
+        foreach (var candidates in candidatesInRow)
         {
-            if (candidateList.Count == 1)
+            if (candidates.Count == 1)
             {
-                ConfirmCatPosition(candidateList[0]);
+                ConfirmCatPosition(candidates[0]);
                 hasFound = true;
+
+                if (logOnFindSingleCandidateInLine)
+                    Debug.Log($"2. Row {candidates[0].y}에 후보가 {candidates[0]} '{RegionUtility.GetRegionId(board, candidates[0])}' 하나만 존재함");
             }
         }
-        foreach (var candidateList in candidatesInColumn)
+        foreach (var candidates in candidatesInColumn)
         {
-            if (candidateList.Count == 1)
+            if (candidates.Count == 1)
             {
-                ConfirmCatPosition(candidateList[0]);
+                ConfirmCatPosition(candidates[0]);
                 hasFound = true;
+
+                if (logOnFindSingleCandidateInLine)
+                    Debug.Log($"2. Column {candidates[0].x}에 후보가 {candidates[0]} '{RegionUtility.GetRegionId(board, candidates[0])}' 하나만 존재함");
             }
         }
 
@@ -166,7 +195,13 @@ public class BoardSolver : MonoBehaviour
             {
                 char regionId = regionsInRow[row].First();
 
-                hasChanged |= RemoveRegionExceptSingleRow(row, regionId);
+                if (RemoveRegionExceptSingleRow(row, regionId))
+                {
+                    hasChanged = true;
+
+                    if (logOnFindSingleRegionInLine)
+                        Debug.Log($"3. Row {row}에 영역이 '{regionId}' 한 종류만 존재함");
+                }
             }
         }
         for (int col = 0; col < regionsInColumn.Length; col++)
@@ -175,13 +210,19 @@ public class BoardSolver : MonoBehaviour
             {
                 char regionId = regionsInColumn[col].First();
 
-                hasChanged |= RemoveRegionExceptSingleColumn(col, regionId);
+                if (RemoveRegionExceptSingleColumn(col, regionId))
+                {
+                    hasChanged = true;
+
+                    if (logOnFindSingleRegionInLine)
+                        Debug.Log($"3. Column {col}에 영역이 '{regionId}' 한 종류만 존재함");
+                }
             }
         }
 
         return hasChanged;
     }
-    // 4. 1개의 영역이 1줄 안에 존재 : 해당 줄에 다른 영역 후보들 제거 
+    // 4. 1개의 영역이 1줄에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
     bool TryFindSingleLineRegion()
     {
         bool hasChanged = false;
@@ -221,13 +262,25 @@ public class BoardSolver : MonoBehaviour
 
             if (isSingleRow)
             {
-                if (RemoveCandidatesInRow(rowIndex, RegionUtility.GetIdFromIndex(region)))
+                char regionId = RegionUtility.GetIdFromIndex(region);
+                if (RemoveCandidatesInRow(rowIndex, regionId))
+                {
                     hasChanged = true;
+
+                    if (logOnFindSingleLineRegion)
+                        Debug.Log($"4. '{regionId}' 영역이 Row {rowIndex}에 모두 존재함");
+                }
             }
             else if (isSingleColumn)
             {
-                if (RemoveCandidatesInColumn(columnIndex, RegionUtility.GetIdFromIndex(region)))
+                char regionId = RegionUtility.GetIdFromIndex(region);
+                if (RemoveCandidatesInColumn(columnIndex, regionId))
+                {
                     hasChanged = true;
+
+                    if (logOnFindSingleLineRegion)
+                        Debug.Log($"4. '{regionId}' 영역이 Column {columnIndex}에 모두 존재함");
+                }
             }
         }
         return hasChanged;
@@ -238,7 +291,7 @@ public class BoardSolver : MonoBehaviour
         // todo
         return false;
     }
-    // 6. n개의 영역이 n개의 줄 안에 존재 : 해당 줄에 다른 영역 후보들 제거
+    // 6. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
     bool TryFindMultiLineRegion()
     {
         bool hasChanged = false;
@@ -324,8 +377,13 @@ public class BoardSolver : MonoBehaviour
 
         if (candidateIndex < 0 || candidateIndex >= candidatesPerRegion[regionIndex].Count)
             return false;
+        
+        // Debug Log용 변수
+        //Vector2Int removedPosition = candidatesPerRegion[regionIndex][candidateIndex];
 
         candidatesPerRegion[regionIndex].RemoveAt(candidateIndex);
+        //Debug.Log($"RemoveCandidate : '{RegionUtility.GetIdFromIndex(regionIndex)}' {removedPosition} 삭제");
+
         return true;
     }
     bool RemoveCandidatesInRow(int rowIndex, params char[] exceptRegionIds)
