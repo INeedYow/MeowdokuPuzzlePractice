@@ -12,8 +12,8 @@ public class TileColorGenerator : MonoBehaviour
     int totalCatCount;
 
 
-    // 같은 알파벳은 같은 색을 의미
-    // 알파벳 대문자는 해당 색의 고양이 위치를 의미
+    // 같은 RegionId는 같은 영역을 의미
+    // RegionId의 대문자는 해당 영역의 고양이 위치를 의미
     // \0 (DefaultChar) : 아직 결정하지 않은 타일
     char[,] board;
     const char DefaultChar = '\0';
@@ -55,7 +55,7 @@ public class TileColorGenerator : MonoBehaviour
         // 한 타일을 여러번 결정하지 않기 위해 decided에 결정 여부 저장
     // 모든 방향에서 포기한 경우 다음 고양이에서 반복
     // 모든 고양이에서 타일 색칠 끝낸 경우, 아직 색이 정해지지 않은 타일은 인접한 색들 중에서 하나로 결정
-    void DecideColorFromCat(Vector2Int catPosition, char alphabet)
+    void DecideColorFromCat(Vector2Int catPosition, char regionId)
     {
         bool[,] decided = new bool[totalCatCount, totalCatCount];
         List<Vector2Int> candidates = new List<Vector2Int>();
@@ -65,7 +65,7 @@ public class TileColorGenerator : MonoBehaviour
 
         // Log
         if (showLog)
-            Debug.Log($"DecideColor : {catPosition} '{alphabet}' 영역 결정 시작");
+            Debug.Log($"DecideColor : {catPosition} '{regionId}' 영역 결정 시작");
 
         while (candidates.Count > 0)
         {
@@ -75,10 +75,10 @@ public class TileColorGenerator : MonoBehaviour
 
             if (TryColorAt(candidate, decided))
             {
-                board[candidate.y, candidate.x] = alphabet;
+                board[candidate.y, candidate.x] = regionId;
                 // Log
                 if (showLog)
-                    Debug.Log($"DecideColor : {candidate} 타일 '{alphabet}'로 결정");
+                    Debug.Log($"DecideColor : {candidate} 타일 '{regionId}'로 결정");
 
                 foreach (var dir in DirectionUtility.Directions4)
                     candidates.Add(candidate + dir);
@@ -133,7 +133,7 @@ public class TileColorGenerator : MonoBehaviour
             foreach (var dir in DirectionUtility.Directions4)
             {
                 Vector2Int neighborPos = candidate + dir;
-                if (TryGetAlphabetAt(neighborPos, out char color))
+                if (TryGetRegionIdAt(neighborPos, out char color))
                 {
                     neighborColors.Add(color);
                 }
@@ -160,7 +160,7 @@ public class TileColorGenerator : MonoBehaviour
                 foreach (var dir in DirectionUtility.Directions4)
                 {
                     neighborPos = new Vector2Int(x, y) + dir;
-                    if (TryGetAlphabetAt(neighborPos, out char color)
+                    if (TryGetRegionIdAt(neighborPos, out char color)
                         && color != DefaultChar)
                     {
                         hasDecidedNeighborTile = true;
@@ -175,28 +175,17 @@ public class TileColorGenerator : MonoBehaviour
 
         return decidableCandidates.Count > 0;
     }
-    bool IsEmptyTileAt(Vector2Int pos)
+
+    bool TryGetRegionIdAt(Vector2Int pos, out char regionId)
     {
+        regionId = DefaultChar;
         if (pos.x < 0 || pos.x >= board.GetLength(1)
             || pos.y < 0 || pos.y >= board.GetLength(0))
         {
-            //Debug.LogError($"TileColorGenerator.IsEmptyTileAt() Error :: {pos} 값이 overflow");
+            //Debug.LogError($"TileColorGenerator.TryGetRegionIdAt() Error :: {pos} 값이 overflow");
             return false;
         }
-
-        return board[pos.y, pos.x] == DefaultChar;
-    }
-
-    bool TryGetAlphabetAt(Vector2Int pos, out char alphabet)
-    {
-        alphabet = DefaultChar;
-        if (pos.x < 0 || pos.x >= board.GetLength(1)
-            || pos.y < 0 || pos.y >= board.GetLength(0))
-        {
-            //Debug.LogError($"TileColorGenerator.GetAlphabetAt() Error :: {pos} 값이 overflow");
-            return false;
-        }
-        alphabet = char.ToLower(board[pos.y, pos.x]);
+        regionId = RegionUtility.GetRegionId(board, pos);
         return true;  
     }
 

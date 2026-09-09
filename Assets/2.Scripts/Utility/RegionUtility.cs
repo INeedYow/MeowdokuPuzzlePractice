@@ -32,4 +32,9 @@ public static class RegionUtility
         index = (int)(id - 'a');
         return true;
     }
+
+    public static char GetRegionId(char[,] board, Vector2Int pos)
+    {
+        return char.ToLower(board[pos.y, pos.x]);
+    }
 }
