@@ -82,7 +82,7 @@ public class BoardSolver : MonoBehaviour
                     Debug.Log($"{pos}");
                 shouldExit = true;
             }
-            if (repeatCount > 100)
+            if (repeatCount > 1000)
             {
                 Debug.Log($"Solver :: 반복 횟수 초과로 강제 종료");
                 shouldExit = true;
@@ -288,13 +288,8 @@ public class BoardSolver : MonoBehaviour
     // 5. n개의 줄에 n개의 영역만 존재 : 해당 줄이 아닌 곳에 존재하는 후보들 제거
     bool TryFindMultiRegionInLines()
     {
-        // todo
-        return false;
-    }
-    // 6. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
-    bool TryFindMultiLineRegion()
-    {
         bool hasChanged = false;
+
         // todo
         //HashSet<int>[] rowIndexes = new HashSet<int>[totalCatCount];
         //HashSet<int>[] columnIndexes = new HashSet<int>[totalCatCount];
@@ -323,6 +318,160 @@ public class BoardSolver : MonoBehaviour
 
         return hasChanged;
     }
+    // 6. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
+    bool TryFindMultiLineRegion()
+    {
+        List<int>[] rowIndexesPerRegion = new List<int>[totalCatCount];
+        List<int>[] colIndexesPerRegion = new List<int>[totalCatCount];
+
+        for (int i = 0; i < rowIndexesPerRegion.Length; i++)
+            rowIndexesPerRegion[i] = new List<int>();
+        for (int i = 0; i < colIndexesPerRegion.Length; i++)
+            colIndexesPerRegion[i] = new List<int>();
+
+        // candidates 정보로 rowIndexesPerRegion, colIndexesPerRegion 생성
+        for (int region = 0; region < candidatesPerRegion.Length; region++)
+        {
+            for (int i = 0; i < candidatesPerRegion[region].Count; i++)
+            {
+                Vector2Int pos = candidatesPerRegion[region][i];
+
+                if (!rowIndexesPerRegion[region].Contains(pos.y))
+                    rowIndexesPerRegion[region].Add(pos.y);
+                if (!colIndexesPerRegion[region].Contains(pos.x))
+                    colIndexesPerRegion[region].Add(pos.x);
+            }
+        }
+
+        int maxLineCount = totalCatCount - 4;
+        for (int n = 2; n < maxLineCount; n++)
+        {
+            List<int> selectedRegions = new List<int>();
+            if (TryFindMultiRegionInRows(n, 0, selectedRegions, rowIndexesPerRegion))
+            {
+                return true;
+            }
+        }
+        for (int n = 0; n < maxLineCount; n++)
+        {
+            List<int> selectedRegions = new List<int>();
+            if (TryFindMultiRegionInColumns(n, 0, selectedRegions, colIndexesPerRegion))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    bool TryFindMultiRegionInRows(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] rowIndexesPerRegion)
+    {
+        // 영역 targetCount개 선택완료 -> 검사
+        if (selectedRegions.Count == targetCount)
+        {
+            // 선택한 영역들이 위치한 rowIndexes의 합집합
+            HashSet<int> indexes = new HashSet<int>();
+
+            for (int i = 0; i < selectedRegions.Count; i++)
+            {
+                int region = selectedRegions[i];
+
+                foreach (var rowIndex in rowIndexesPerRegion[region])
+                    indexes.Add(rowIndex);
+            }
+
+            // 선택한 영역들이 targetCount개의 줄 안에 모두 위치함
+            if (indexes.Count == targetCount)
+            {
+                char[] selectedRegionIds = new char[selectedRegions.Count];
+                for (int i = 0; i < selectedRegions.Count; i++)
+                    selectedRegionIds[i] = RegionUtility.GetIdFromIndex(selectedRegions[i]);
+
+                // 해당 줄들에 다른 영역 후보들 제거
+                bool hasRemoved = false;
+                foreach (var index in indexes)
+                {
+                    hasRemoved |= RemoveCandidatesInRow(index, selectedRegionIds);
+                }
+                // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
+                return hasRemoved;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // 영역 선택 재귀, selectedRegions 중복 선택을 막기 위해 startIndex로 조절
+        for (int region = startIndex; region < rowIndexesPerRegion.Length; region++)
+        {
+            selectedRegions.Add(region);
+
+            // 후보 제거에 성공
+            if (TryFindMultiRegionInRows(targetCount, region + 1, selectedRegions, rowIndexesPerRegion))
+            {
+                return true;
+            }
+
+            // 후보 제거에 실패했으면 다른 영역 선택
+            selectedRegions.RemoveAt(selectedRegions.Count - 1);
+        }
+
+        return false;
+    }
+    bool TryFindMultiRegionInColumns(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] colIndexesPerRegion)
+    {
+        // 영역 targetCount개 선택완료 -> 검사
+        if (selectedRegions.Count == targetCount)
+        {
+            // 선택한 영역들이 위치한 colIndexes의 합집합
+            HashSet<int> indexes = new HashSet<int>();
+
+            for (int i = 0; i < selectedRegions.Count; i++)
+            {
+                int region = selectedRegions[i];
+
+                foreach (var colIndex in colIndexesPerRegion[region])
+                    indexes.Add(colIndex);
+            }
+
+            // 선택한 영역들이 targetCount개의 줄 안에 모두 위치함
+            if (indexes.Count == targetCount)
+            {
+                char[] selectedRegionIds = new char[selectedRegions.Count];
+                for (int i = 0; i < selectedRegions.Count; i++)
+                    selectedRegionIds[i] = RegionUtility.GetIdFromIndex(selectedRegions[i]);
+
+                // 해당 줄들에 다른 영역 후보들 제거
+                bool hasRemoved = false;
+                foreach (var index in indexes)
+                {
+                    hasRemoved |= RemoveCandidatesInColumn(index, selectedRegionIds);
+                }
+                // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
+                return hasRemoved;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // 영역 선택 재귀, selectedRegions 중복 선택을 막기 위해 startIndex로 조절
+        for (int region = startIndex; region < colIndexesPerRegion.Length; region++)
+        {
+            selectedRegions.Add(region);
+
+            // 후보 제거에 성공
+            if (TryFindMultiRegionInColumns(targetCount, region + 1, selectedRegions, colIndexesPerRegion))
+            {
+                return true;
+            }
+
+            // 후보 제거에 실패했으면 다른 영역 선택
+            selectedRegions.RemoveAt(selectedRegions.Count - 1);
+        }
+
+        return false;
+    }
+
     // 7. 모순 위치 찾기 : 특정 타일에 고양이가 있을 때 모순인지 확인
     void SolveByAssumption()
     {
