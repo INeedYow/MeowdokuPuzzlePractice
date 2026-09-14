@@ -63,13 +63,13 @@ public class BoardSolver : MonoBehaviour
             if (TryFindSingleRegionInLine()) continue;
 
             // 4. 1개의 영역이 1줄에 모두 존재
-            if (TryFindSingleLineRegion()) continue;
+            if (TryFindSingleLineInRegion()) continue;
 
             // 5. n개의 줄에 n개의 영역만 존재
             if (TryFindMultiRegionInLines()) continue;
 
             // 6. n개의 영역이 n개의 줄 안에 모두 존재
-            if (TryFindMultiLineRegion()) continue;
+            if (TryFindMultiLineInRegions()) continue;
 
             // 7. 모순 위치 찾기
             SolveByAssumption();
@@ -223,7 +223,7 @@ public class BoardSolver : MonoBehaviour
         return hasChanged;
     }
     // 4. 1개의 영역이 1줄에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
-    bool TryFindSingleLineRegion()
+    bool TryFindSingleLineInRegion()
     {
         bool hasChanged = false;
         for (int region = 0; region < candidatesPerRegion.Length; region++)
@@ -288,38 +288,169 @@ public class BoardSolver : MonoBehaviour
     // 5. n개의 줄에 n개의 영역만 존재 : 해당 줄이 아닌 곳에 존재하는 후보들 제거
     bool TryFindMultiRegionInLines()
     {
-        bool hasChanged = false;
+        List<int>[] regionsInRow = new List<int>[totalCatCount];
+        List<int>[] regionsInColumn = new List<int>[totalCatCount];
 
-        // todo
-        //HashSet<int>[] rowIndexes = new HashSet<int>[totalCatCount];
-        //HashSet<int>[] columnIndexes = new HashSet<int>[totalCatCount];
+        for (int i = 0; i < regionsInRow.Length; i++)
+            regionsInRow[i] = new List<int>();
+        for (int i = 0; i < regionsInColumn.Length; i++)
+            regionsInColumn[i] = new List<int>();
 
-        //for (int i = 0; i < rowIndexes.Length; i++)
-        //    rowIndexes[i] = new HashSet<int>();
-        //for (int i = 0; i < columnIndexes.Length; i++)
-        //    columnIndexes[i] = new HashSet<int>();
+        // candidates 정보로 regionsInRow, regionsInColumn 생성
+        for (int region = 0; region < candidatesPerRegion.Length; region++)
+        {
+            for (int i = 0; i < candidatesPerRegion[region].Count; i++)
+            {
+                Vector2Int pos = candidatesPerRegion[region][i];
 
-        //for (int i = 0; i < candidatesPerRegion.Length; i++)
-        //{
-        //    for (int j = 0; j < candidatesPerRegion[i].Count; j++)
-        //    {
-        //        Vector2Int pos = candidatesPerRegion[i][j];
-        //        rowIndexes[i].Add(pos.y);
-        //        columnIndexes[i].Add(pos.x);
-        //    }
-        //}
+                if (!regionsInRow[pos.y].Contains(region))
+                    regionsInRow[pos.y].Add(region);
+                if (!regionsInColumn[pos.x].Contains(region))
+                    regionsInColumn[pos.x].Add(region);
+            }
+        }
 
-        //for (int i = 0; i < rowIndexes.Length; i++)
-        //{
-        //    if (rowIndexes[i].Count <= 1) continue;
+        // 5.6. 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
+        // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
+        int maxLineCount = totalCatCount / 2;
+        for (int n = 2; n < maxLineCount; n++)
+        {
+            List<int> selectedRows = new List<int>();
+            if (TryFindRegionCombinationInRows(n, 0, selectedRows, regionsInRow))
+            {
+                return true;
+            }
+        }
+        for (int n = 2; n < maxLineCount; n++)
+        {
+            List<int> selectedCols = new List<int>();
+            if (TryFindRegionCombinationInColumns(n, 0, selectedCols, regionsInColumn))
+            {
+                return true;
+            }
+        }
 
-        //    
-        //}
-
-        return hasChanged;
+        return false;
     }
+    bool TryFindRegionCombinationInRows(int targetCount, int startIndex, List<int> selectedRows, List<int>[] regionsInRow)
+    {
+        // 영역 targetCount개 선택완료 -> 검사
+        if (selectedRows.Count == targetCount)
+        {
+            // 선택한 줄들에 위치한 후보 영역들의 합집합
+            HashSet<int> regions = new HashSet<int>();
+
+            for (int i = 0; i < selectedRows.Count; i++)
+            {
+                int row = selectedRows[i];
+
+                foreach (var region in regionsInRow[row])
+                    regions.Add(region);
+            }
+
+            // 선택한 줄들에 targetCount개의 영역만 존재
+            if (regions.Count == targetCount)
+            {
+                char[] selectedRegionIds = new char[regions.Count];
+                int i = 0;
+                foreach (var region in regions)
+                    selectedRegionIds[i++] = RegionUtility.GetIdFromIndex(region);
+
+                // 선택한 줄들이 아닌 곳에 위치한 해당 영역 후보들 제거
+                bool hasRemoved = false;
+                for (int row = 0; row < totalCatCount; row++)
+                {
+                    if (selectedRows.Contains(row))
+                        continue;
+
+                    hasRemoved |= RemoveCandidatesInRow(row, selectedRegionIds);
+                }
+                // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
+                return hasRemoved;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // 줄 선택 재귀, selectedRows 중복 선택을 막기 위해 startIndex로 조절
+        for (int region = startIndex; region < regionsInRow.Length; region++)
+        {
+            selectedRows.Add(region);
+
+            // 후보 제거에 성공
+            if (TryFindRegionCombinationInRows(targetCount, region + 1, selectedRows, regionsInRow))
+            {
+                return true;
+            }
+
+            // 후보 제거에 실패했으면 다른 영역 선택
+            selectedRows.RemoveAt(selectedRows.Count - 1);
+        }
+
+        return false;
+    }
+    bool TryFindRegionCombinationInColumns(int targetCount, int startIndex, List<int> selectedCols, List<int>[] regionsInCol)
+    {
+        // 영역 targetCount개 선택완료 -> 검사
+        if (selectedCols.Count == targetCount)
+        {
+            // 선택한 줄들에 위치한 후보 영역들의 합집합
+            HashSet<int> regions = new HashSet<int>();
+
+            for (int i = 0; i < selectedCols.Count; i++)
+            {
+                int col = selectedCols[i];
+
+                foreach (var region in regionsInCol[col])
+                    regions.Add(region);
+            }
+
+            // 선택한 줄들에 targetCount개의 영역만 존재
+            if (regions.Count == targetCount)
+            {
+                char[] selectedRegionIds = new char[regions.Count];
+                int i = 0;
+                foreach (var region in regions)
+                    selectedRegionIds[i++] = RegionUtility.GetIdFromIndex(region);
+
+                // 선택한 줄들이 아닌 곳에 위치한 해당 영역 후보들 제거
+                bool hasRemoved = false;
+                for (int col = 0; col < totalCatCount; col++)
+                {
+                    if (selectedCols.Contains(col))
+                        continue;
+
+                    hasRemoved |= RemoveCandidatesInColumn(col, selectedRegionIds);
+                }
+                // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
+                return hasRemoved;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // 줄 선택 재귀, selectedCols 중복 선택을 막기 위해 startIndex로 조절
+        for (int region = startIndex; region < regionsInCol.Length; region++)
+        {
+            selectedCols.Add(region);
+
+            // 후보 제거에 성공
+            if (TryFindRegionCombinationInColumns(targetCount, region + 1, selectedCols, regionsInCol))
+            {
+                return true;
+            }
+
+            // 후보 제거에 실패했으면 다른 영역 선택
+            selectedCols.RemoveAt(selectedCols.Count - 1);
+        }
+
+        return false;
+    }
+
     // 6. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
-    bool TryFindMultiLineRegion()
+    bool TryFindMultiLineInRegions()
     {
         List<int>[] rowIndexesPerRegion = new List<int>[totalCatCount];
         List<int>[] colIndexesPerRegion = new List<int>[totalCatCount];
@@ -343,19 +474,21 @@ public class BoardSolver : MonoBehaviour
             }
         }
 
-        int maxLineCount = totalCatCount - 4;
+        // 5.6. 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
+        // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
+        int maxLineCount = totalCatCount / 2;
         for (int n = 2; n < maxLineCount; n++)
         {
             List<int> selectedRegions = new List<int>();
-            if (TryFindMultiRegionInRows(n, 0, selectedRegions, rowIndexesPerRegion))
+            if (TryFindRowCombinationInRegions(n, 0, selectedRegions, rowIndexesPerRegion))
             {
                 return true;
             }
         }
-        for (int n = 0; n < maxLineCount; n++)
+        for (int n = 2; n < maxLineCount; n++)
         {
             List<int> selectedRegions = new List<int>();
-            if (TryFindMultiRegionInColumns(n, 0, selectedRegions, colIndexesPerRegion))
+            if (TryFindColumnCombinationInRegions(n, 0, selectedRegions, colIndexesPerRegion))
             {
                 return true;
             }
@@ -363,7 +496,7 @@ public class BoardSolver : MonoBehaviour
 
         return false;
     }
-    bool TryFindMultiRegionInRows(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] rowIndexesPerRegion)
+    bool TryFindRowCombinationInRegions(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] rowIndexesPerRegion)
     {
         // 영역 targetCount개 선택완료 -> 검사
         if (selectedRegions.Count == targetCount)
@@ -406,7 +539,7 @@ public class BoardSolver : MonoBehaviour
             selectedRegions.Add(region);
 
             // 후보 제거에 성공
-            if (TryFindMultiRegionInRows(targetCount, region + 1, selectedRegions, rowIndexesPerRegion))
+            if (TryFindRowCombinationInRegions(targetCount, region + 1, selectedRegions, rowIndexesPerRegion))
             {
                 return true;
             }
@@ -417,7 +550,7 @@ public class BoardSolver : MonoBehaviour
 
         return false;
     }
-    bool TryFindMultiRegionInColumns(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] colIndexesPerRegion)
+    bool TryFindColumnCombinationInRegions(int targetCount, int startIndex, List<int> selectedRegions, List<int>[] colIndexesPerRegion)
     {
         // 영역 targetCount개 선택완료 -> 검사
         if (selectedRegions.Count == targetCount)
@@ -460,7 +593,7 @@ public class BoardSolver : MonoBehaviour
             selectedRegions.Add(region);
 
             // 후보 제거에 성공
-            if (TryFindMultiRegionInColumns(targetCount, region + 1, selectedRegions, colIndexesPerRegion))
+            if (TryFindColumnCombinationInRegions(targetCount, region + 1, selectedRegions, colIndexesPerRegion))
             {
                 return true;
             }
