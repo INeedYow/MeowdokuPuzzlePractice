@@ -5,6 +5,8 @@ using UnityEngine;
 public class BoardSolver : MonoBehaviour
 {
     [Header("Debug Log")]
+    [Tooltip("후보 삭제 로그")]
+    [SerializeField] bool logOnRemoveCandidate = false;
     [Tooltip("1번 규칙 로그")]
     [SerializeField] bool logOnFindSingleTileRegion = true;
     [Tooltip("2번 규칙 로그")]
@@ -272,7 +274,7 @@ public class BoardSolver : MonoBehaviour
             if (isSingleRow)
             {
                 char regionId = RegionUtility.GetIdFromIndex(region);
-                if (RemoveCandidatesInRow(rowIndex, regionId))
+                if (RemoveCandidatesInRowExcept(rowIndex, regionId))
                 {
                     hasChanged = true;
 
@@ -283,7 +285,7 @@ public class BoardSolver : MonoBehaviour
             else if (isSingleColumn)
             {
                 char regionId = RegionUtility.GetIdFromIndex(region);
-                if (RemoveCandidatesInColumn(columnIndex, regionId))
+                if (RemoveCandidatesInColumnExcept(columnIndex, regionId))
                 {
                     hasChanged = true;
 
@@ -322,7 +324,7 @@ public class BoardSolver : MonoBehaviour
         // 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
         // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
         int maxLineCount = totalCatCount / 2;
-        for (int n = 2; n < maxLineCount; n++)
+        for (int n = 2; n <= maxLineCount; n++)
         {
             List<int> selectedRows = new List<int>();
             if (TryFindRegionCombinationInRows(n, 0, selectedRows, regionsInRow))
@@ -330,7 +332,7 @@ public class BoardSolver : MonoBehaviour
                 return true;
             }
         }
-        for (int n = 2; n < maxLineCount; n++)
+        for (int n = 2; n <= maxLineCount; n++)
         {
             List<int> selectedCols = new List<int>();
             if (TryFindRegionCombinationInColumns(n, 0, selectedCols, regionsInColumn))
@@ -372,7 +374,7 @@ public class BoardSolver : MonoBehaviour
                     if (selectedRows.Contains(row))
                         continue;
 
-                    hasRemoved |= RemoveCandidatesInRow(row, selectedRegionIds);
+                    hasRemoved |= RemoveCandidatesInRowOnly(row, selectedRegionIds);
                 }
                 // log
                 if (logOnFindMultiRegionInLines && hasRemoved)
@@ -388,12 +390,16 @@ public class BoardSolver : MonoBehaviour
             }
         }
         // 줄 선택 재귀, selectedRows 중복 선택을 막기 위해 startIndex로 조절
-        for (int region = startIndex; region < regionsInRow.Length; region++)
+        for (int row = startIndex; row < regionsInRow.Length; row++)
         {
-            selectedRows.Add(region);
+            // 후보가 없는 줄은 스킵
+            if (regionsInRow[row].Count == 0)
+                continue;
+
+            selectedRows.Add(row);
 
             // 후보 제거에 성공
-            if (TryFindRegionCombinationInRows(targetCount, region + 1, selectedRows, regionsInRow))
+            if (TryFindRegionCombinationInRows(targetCount, row + 1, selectedRows, regionsInRow))
             {
                 return true;
             }
@@ -435,7 +441,7 @@ public class BoardSolver : MonoBehaviour
                     if (selectedCols.Contains(col))
                         continue;
 
-                    hasRemoved |= RemoveCandidatesInColumn(col, selectedRegionIds);
+                    hasRemoved |= RemoveCandidatesInColumnOnly(col, selectedRegionIds);
                 }
                 // log
                 if (logOnFindMultiRegionInLines && hasRemoved)
@@ -451,12 +457,16 @@ public class BoardSolver : MonoBehaviour
             }
         }
         // 줄 선택 재귀, selectedCols 중복 선택을 막기 위해 startIndex로 조절
-        for (int region = startIndex; region < regionsInCol.Length; region++)
+        for (int col = startIndex; col < regionsInCol.Length; col++)
         {
-            selectedCols.Add(region);
+            // 후보가 없는 줄은 스킵
+            if (regionsInCol[col].Count == 0)
+                continue;
+
+            selectedCols.Add(col);
 
             // 후보 제거에 성공
-            if (TryFindRegionCombinationInColumns(targetCount, region + 1, selectedCols, regionsInCol))
+            if (TryFindRegionCombinationInColumns(targetCount, col + 1, selectedCols, regionsInCol))
             {
                 return true;
             }
@@ -496,7 +506,7 @@ public class BoardSolver : MonoBehaviour
         // 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
         // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
         int maxLineCount = totalCatCount / 2;
-        for (int n = 2; n < maxLineCount; n++)
+        for (int n = 2; n <= maxLineCount; n++)
         {
             List<int> selectedRegions = new List<int>();
             if (TryFindRowCombinationInRegions(n, 0, selectedRegions, rowIndexesPerRegion))
@@ -504,7 +514,7 @@ public class BoardSolver : MonoBehaviour
                 return true;
             }
         }
-        for (int n = 2; n < maxLineCount; n++)
+        for (int n = 2; n <= maxLineCount; n++)
         {
             List<int> selectedRegions = new List<int>();
             if (TryFindColumnCombinationInRegions(n, 0, selectedRegions, colIndexesPerRegion))
@@ -542,7 +552,7 @@ public class BoardSolver : MonoBehaviour
                 bool hasRemoved = false;
                 foreach (var index in indexes)
                 {
-                    hasRemoved |= RemoveCandidatesInRow(index, selectedRegionIds);
+                    hasRemoved |= RemoveCandidatesInRowExcept(index, selectedRegionIds);
                 }
                 // log
                 if (logOnFindMultiLineInRegion && hasRemoved)
@@ -560,6 +570,10 @@ public class BoardSolver : MonoBehaviour
         // 영역 선택 재귀, selectedRegions 중복 선택을 막기 위해 startIndex로 조절
         for (int region = startIndex; region < rowIndexesPerRegion.Length; region++)
         {
+            // 고양이 이미 찾은 영역이면 스킵
+            if (candidatesPerRegion[region].Count == 0)
+                continue;
+
             selectedRegions.Add(region);
 
             // 후보 제거에 성공
@@ -601,7 +615,7 @@ public class BoardSolver : MonoBehaviour
                 bool hasRemoved = false;
                 foreach (var index in indexes)
                 {
-                    hasRemoved |= RemoveCandidatesInColumn(index, selectedRegionIds);
+                    hasRemoved |= RemoveCandidatesInColumnExcept(index, selectedRegionIds);
                 }
                 // log
                 if (logOnFindMultiLineInRegion && hasRemoved)
@@ -619,6 +633,10 @@ public class BoardSolver : MonoBehaviour
         // 영역 선택 재귀, selectedRegions 중복 선택을 막기 위해 startIndex로 조절
         for (int region = startIndex; region < colIndexesPerRegion.Length; region++)
         {
+            // 고양이 이미 찾은 영역이면 스킵
+            if (candidatesPerRegion[region].Count == 0)
+                continue;
+
             selectedRegions.Add(region);
 
             // 후보 제거에 성공
@@ -679,6 +697,9 @@ public class BoardSolver : MonoBehaviour
             return false;
         }
 
+        if (logOnRemoveCandidate && candidatesPerRegion[index].Contains(position))
+            Debug.Log($"RemoveCandidate :: {position} / '{board[position.y, position.x]}'");
+
         return candidatesPerRegion[index].Remove(position);
     }
     bool RemoveCandidate(int regionIndex, int candidateIndex)
@@ -690,14 +711,27 @@ public class BoardSolver : MonoBehaviour
             return false;
         
         // Debug Log용 변수
-        //Vector2Int removedPosition = candidatesPerRegion[regionIndex][candidateIndex];
+        Vector2Int removedPosition = candidatesPerRegion[regionIndex][candidateIndex];
+
+        if (logOnRemoveCandidate)
+            Debug.Log($"RemoveCandidate :: {removedPosition} / '{RegionUtility.GetIdFromIndex(regionIndex)}'");
 
         candidatesPerRegion[regionIndex].RemoveAt(candidateIndex);
-        //Debug.Log($"RemoveCandidate : '{RegionUtility.GetIdFromIndex(regionIndex)}' {removedPosition} 삭제");
-
         return true;
     }
-    bool RemoveCandidatesInRow(int rowIndex, params char[] exceptRegionIds)
+    bool RemoveCandidatesInRow(int rowIndex)
+    {
+        bool hasRemoved = false;
+        for (int x = 0; x < board.GetLength(1); x++)
+        {
+            Vector2Int pos = new Vector2Int(x, rowIndex);
+            char regionId = RegionUtility.GetRegionId(board, pos);
+
+            hasRemoved |= RemoveCandidate(pos);
+        }
+        return hasRemoved;
+    }
+    bool RemoveCandidatesInRowExcept(int rowIndex, params char[] exceptRegionIds)
     {
         bool hasRemoved = false;
         for (int x = 0; x < board.GetLength(1); x++)
@@ -707,6 +741,66 @@ public class BoardSolver : MonoBehaviour
 
             if (exceptRegionIds != null
                 && exceptRegionIds.Contains(regionId))
+                continue;
+
+            hasRemoved |= RemoveCandidate(pos);
+        }
+        return hasRemoved;
+    }
+    bool RemoveCandidatesInRowOnly(int rowIndex, params char[] targetRegionIds)
+    {
+        bool hasRemoved = false;
+        for (int x = 0; x < board.GetLength(1); x++)
+        {
+            Vector2Int pos = new Vector2Int(x, rowIndex);
+            char regionId = RegionUtility.GetRegionId(board, pos);
+
+            if (targetRegionIds == null
+                || !targetRegionIds.Contains(regionId))
+                continue;
+
+            hasRemoved |= RemoveCandidate(pos);
+        }
+        return hasRemoved;
+    }
+    bool RemoveCandidatesInColumn(int columnIndex)
+    {
+        bool hasRemoved = false;
+        for (int y = 0; y < board.GetLength(0); y++)
+        {
+            Vector2Int pos = new Vector2Int(columnIndex, y);
+            char regionId = RegionUtility.GetRegionId(board, pos);  
+
+            hasRemoved |= RemoveCandidate(pos);
+        }
+        return hasRemoved;
+    }
+    bool RemoveCandidatesInColumnExcept(int columnIndex, params char[] exceptRegionIds)
+    {
+        bool hasRemoved = false;
+        for (int y = 0; y < board.GetLength(0); y++)
+        {
+            Vector2Int pos = new Vector2Int(columnIndex, y);
+            char regionId = RegionUtility.GetRegionId(board, pos);
+
+            if (exceptRegionIds != null
+                && exceptRegionIds.Contains(regionId))
+                continue;
+
+            hasRemoved |= RemoveCandidate(pos);
+        }
+        return hasRemoved;
+    }
+    bool RemoveCandidatesInColumnOnly(int columnIndex, params char[] targetRegionIds)
+    {
+        bool hasRemoved = false;
+        for (int y = 0; y < board.GetLength(0); y++)
+        {
+            Vector2Int pos = new Vector2Int(columnIndex, y);
+            char regionId = RegionUtility.GetRegionId(board, pos);
+
+            if (targetRegionIds == null
+                || !targetRegionIds.Contains(regionId))
                 continue;
 
             hasRemoved |= RemoveCandidate(pos);
@@ -742,22 +836,6 @@ public class BoardSolver : MonoBehaviour
             {
                 hasRemoved |= RemoveCandidate(regionIndex, i);
             }
-        }
-        return hasRemoved;
-    }
-    bool RemoveCandidatesInColumn(int columnIndex, params char[] exceptRegionIds)
-    {
-        bool hasRemoved = false;
-        for (int y = 0; y < board.GetLength(0); y++)
-        {
-            Vector2Int pos = new Vector2Int(columnIndex, y);
-            char regionId = RegionUtility.GetRegionId(board, pos);  
-
-            if (exceptRegionIds != null
-                && exceptRegionIds.Contains(regionId))
-                continue;
-
-            hasRemoved |= RemoveCandidate(pos);
         }
         return hasRemoved;
     }
