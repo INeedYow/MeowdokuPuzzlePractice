@@ -200,7 +200,7 @@ public class TileColorGenerator : MonoBehaviour
             for (int x = 0; x < board.GetLength(1); x++)
             {
                 char value = board[y, x];
-                sb.Append($"{(value == DefaultChar ? '.' : value),3} ");
+                sb.Append($"{(value == DefaultChar ? '.' : value)}\t");
             }
 
             sb.AppendLine();

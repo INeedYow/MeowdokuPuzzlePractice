@@ -5,11 +5,20 @@ using UnityEngine;
 public class BoardSolver : MonoBehaviour
 {
     [Header("Debug Log")]
+    [Tooltip("1번 규칙 로그")]
     [SerializeField] bool logOnFindSingleTileRegion = true;
+    [Tooltip("2번 규칙 로그")]
     [SerializeField] bool logOnFindSingleCandidateInLine = true;
+    [Tooltip("3번 규칙 로그")]
     [SerializeField] bool logOnFindSingleRegionInLine = true;
-    [SerializeField] bool logOnFindSingleLineRegion = true;
-    
+    [Tooltip("4번 규칙 로그")]
+    [SerializeField] bool logOnFindSingleLineInRegion = true;
+    [Tooltip("5번 규칙 로그")]
+    [SerializeField] bool logOnFindMultiRegionInLines = true;
+    [Tooltip("6번 규칙 로그")]
+    [SerializeField] bool logOnFindMultiLineInRegion = true;
+
+
     char[,] board;
     int totalCatCount;
 
@@ -267,7 +276,7 @@ public class BoardSolver : MonoBehaviour
                 {
                     hasChanged = true;
 
-                    if (logOnFindSingleLineRegion)
+                    if (logOnFindSingleLineInRegion)
                         Debug.Log($"4. '{regionId}' 영역이 Row {rowIndex}에 모두 존재함");
                 }
             }
@@ -278,7 +287,7 @@ public class BoardSolver : MonoBehaviour
                 {
                     hasChanged = true;
 
-                    if (logOnFindSingleLineRegion)
+                    if (logOnFindSingleLineInRegion)
                         Debug.Log($"4. '{regionId}' 영역이 Column {columnIndex}에 모두 존재함");
                 }
             }
@@ -310,7 +319,7 @@ public class BoardSolver : MonoBehaviour
             }
         }
 
-        // 5.6. 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
+        // 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
         // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
         int maxLineCount = totalCatCount / 2;
         for (int n = 2; n < maxLineCount; n++)
@@ -364,6 +373,11 @@ public class BoardSolver : MonoBehaviour
                         continue;
 
                     hasRemoved |= RemoveCandidatesInRow(row, selectedRegionIds);
+                }
+                // log
+                if (logOnFindMultiRegionInLines && hasRemoved)
+                {
+                    Debug.Log($"5. Row {string.Join(",", selectedRows)}에 {string.Join(",", selectedRegionIds)} 영역만 존재");
                 }
                 // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
                 return hasRemoved;
@@ -423,6 +437,11 @@ public class BoardSolver : MonoBehaviour
 
                     hasRemoved |= RemoveCandidatesInColumn(col, selectedRegionIds);
                 }
+                // log
+                if (logOnFindMultiRegionInLines && hasRemoved)
+                {
+                    Debug.Log($"5. Column {string.Join(",", selectedCols)}에 {string.Join(",", selectedRegionIds)} 영역만 존재");
+                }
                 // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
                 return hasRemoved;
             }
@@ -474,7 +493,7 @@ public class BoardSolver : MonoBehaviour
             }
         }
 
-        // 5.6. 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
+        // 함수가 서로 보완 관계여서 maxLineCount는 totalCatCount의 절반까지만
         // ex. 10x10 보드에서 9개의 영역이 9개의 줄 안에 모두 존재 -> 남은 1줄에 1개의 영역만 존재
         int maxLineCount = totalCatCount / 2;
         for (int n = 2; n < maxLineCount; n++)
@@ -524,6 +543,11 @@ public class BoardSolver : MonoBehaviour
                 foreach (var index in indexes)
                 {
                     hasRemoved |= RemoveCandidatesInRow(index, selectedRegionIds);
+                }
+                // log
+                if (logOnFindMultiLineInRegion && hasRemoved)
+                {
+                    Debug.Log($"6. {string.Join(",", selectedRegionIds)} 영역들이 Row {string.Join(",", indexes)} 안에 모두 존재");
                 }
                 // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
                 return hasRemoved;
@@ -578,6 +602,11 @@ public class BoardSolver : MonoBehaviour
                 foreach (var index in indexes)
                 {
                     hasRemoved |= RemoveCandidatesInColumn(index, selectedRegionIds);
+                }
+                // log
+                if (logOnFindMultiLineInRegion && hasRemoved)
+                {
+                    Debug.Log($"6. {string.Join(",", selectedRegionIds)} 영역들이 Column {string.Join(",", indexes)} 안에 모두 존재");
                 }
                 // 후보 제거에 성공했으면 true 반환하면서 재귀 종료
                 return hasRemoved;
