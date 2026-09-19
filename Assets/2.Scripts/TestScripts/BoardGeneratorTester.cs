@@ -16,18 +16,15 @@ public class BoardGeneratorTester : MonoBehaviour
 
     char[,] testBoard =
     {
-        { 'b', 'b', 'b', 'b', 'A', 'a', 'a', 'a', 'a', 'f' },
-        { 'b', 'B', 'b', 'b', 'a', 'a', 'a', 'a', 'a', 'f' },
-        { 'b', 'b', 'b', 'b', 'a', 'c', 'C', 'c', 'f', 'f' },
-        { 'b', 'b', 'd', 'D', 'b', 'b', 'c', 'f', 'f', 'f' },
-        { 'b', 'b', 'b', 'b', 'b', 'b', 'e', 'E', 'f', 'f' },
-        { 'b', 'b', 'g', 'b', 'b', 'b', 'e', 'e', 'e', 'F' },
-        { 'b', 'b', 'G', 'b', 'b', 'h', 'e', 'h', 'h', 'i' },
-        { 'b', 'b', 'b', 'b', 'b', 'H', 'h', 'h', 'h', 'i' },
-        { 'b', 'b', 'b', 'b', 'b', 'b', 'i', 'i', 'I', 'i' },
-        { 'J', 'j', 'j', 'b', 'b', 'b', 'b', 'b', 'i', 'i' }
+        { 'A', 'a', 'b', 'b', 'b', 'b', 'c', 'c' },
+        { 'a', 'a', 'b', 'B', 'b', 'b', 'c', 'c' },
+        { 'a', 'a', 'b', 'b', 'b', 'b', 'b', 'C' },
+        { 'f', 'f', 'f', 'f', 'D', 'b', 'b', 'b' },
+        { 'f', 'f', 'f', 'f', 'd', 'e', 'E', 'b' },
+        { 'f', 'F', 'f', 'f', 'e', 'e', 'b', 'b' },
+        { 'f', 'f', 'f', 'f', 'g', 'G', 'b', 'b' },
+        { 'h', 'h', 'H', 'h', 'g', 'g', 'b', 'b' }
     };
-    int testCatCount = 10;
 
     private void Awake()
     {
@@ -62,6 +59,13 @@ public class BoardGeneratorTester : MonoBehaviour
         if (solver == null)
             return;
 
+        if (testBoard.GetLength(0) != testBoard.GetLength(1))
+        {
+            Debug.LogError($"테스트 보드 풀이 Error :: TestBoard.GetLength(0) = {testBoard.GetLength(0)} / testBoard.GetLength(1) = {testBoard.GetLength(1)}");
+            return;
+        }
+            
+        int testCatCount = testBoard.GetLength(0);
         solver.Solve(testBoard, testCatCount);
     }
 }
