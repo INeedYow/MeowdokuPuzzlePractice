@@ -16,14 +16,14 @@ public class BoardGeneratorTester : MonoBehaviour
 
     char[,] testBoard =
     {
-        { 'A', 'a', 'b', 'b', 'b', 'b', 'c', 'c' },
-        { 'a', 'a', 'b', 'B', 'b', 'b', 'c', 'c' },
-        { 'a', 'a', 'b', 'b', 'b', 'b', 'b', 'C' },
-        { 'f', 'f', 'f', 'f', 'D', 'b', 'b', 'b' },
-        { 'f', 'f', 'f', 'f', 'd', 'e', 'E', 'b' },
-        { 'f', 'F', 'f', 'f', 'e', 'e', 'b', 'b' },
-        { 'f', 'f', 'f', 'f', 'g', 'G', 'b', 'b' },
-        { 'h', 'h', 'H', 'h', 'g', 'g', 'b', 'b' }
+        { 'b', 'b', 'b', 'a', 'a', 'A', 'a', 'a' },
+        { 'b', 'b', 'B', 'b', 'a', 'd', 'a', 'a' },
+        { 'b', 'b', 'b', 'b', 'd', 'd', 'c', 'C' },
+        { 'e', 'e', 'e', 'b', 'D', 'd', 'd', 'd' },
+        { 'E', 'e', 'e', 'd', 'd', 'd', 'd', 'd' },
+        { 'e', 'e', 'e', 'd', 'd', 'd', 'F', 'f' },
+        { 'h', 'h', 'e', 'G', 'e', 'e', 'e', 'e' },
+        { 'h', 'H', 'e', 'e', 'e', 'e', 'e', 'e' }
     };
 
     private void Awake()
