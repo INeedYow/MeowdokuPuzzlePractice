@@ -21,6 +21,8 @@ public class BoardSolver : MonoBehaviour
     [SerializeField] bool logOnFindMultiRegionInLines = true;
     [Tooltip("7번 규칙 로그")]
     [SerializeField] bool logOnFindMultiLineInRegion = true;
+    [Tooltip("8번 규칙 로그")]
+    [SerializeField] bool logOnFindContradictionCandidate = true;
 
 
     char[,] board;
@@ -39,8 +41,10 @@ public class BoardSolver : MonoBehaviour
     // 5. 다른 영역의 후보를 모두 제거하는 후보 제거
     // 6. n개의 줄에 n개의 영역만 존재 : 해당 줄이 아닌 곳에 존재하는 후보들 제거
     // 7. n개의 영역이 n개의 줄 안에 모두 존재 : 해당 줄에 다른 영역 후보들 제거
-    // 8. 모순 위치 찾기 : 특정 타일에 고양이가 있을 때 모순인지 확인
+    // 8. 모순 위치 찾기 : 특정 후보가 고양이일 때 모순인지 확인
+        // 모든 후보를 대상으로 하지 않고, 다른 영역의 후보를 1개로 만드는 후보만 탐색
     // 1->8로 진행하며, 변경점(후보 제거 등)이 있으면 1로 돌아가서 반복 진행
+    // 1~8 한 사이클 진행하는 동안 후보의 변경이 없었다면 풀이가 불가능하다고 판단
     public void Solve(char[,] board, int catCount)
     {
         this.board = board;
@@ -66,11 +70,15 @@ public class BoardSolver : MonoBehaviour
             }
         }
 
-        bool shouldExit = false;
-        int repeatCount = 0;
-        do 
+        while (true)
         {
-            repeatCount++;
+            // 모든 고양이 찾기 성공
+            if (foundCatPositions.Count == catCount)
+            {
+                Debug.Log($"Solver :: 고양이 모두 찾아서 종료 ({catCount} 마리) \n {string.Join(", ", foundCatPositions)}");
+                break;
+            }
+
             // 1. 1칸짜리 영역 확정
             if (TryFindSingleCandidateRegion()) continue;
 
@@ -93,22 +101,12 @@ public class BoardSolver : MonoBehaviour
             if (TryFindMultiLineInRegions()) continue;
 
             // 8. 모순 위치 찾기
-            SolveByAssumption();
-
-            //shouldExit = (foundCatPositions.Count == catCount);
-            if (foundCatPositions.Count == catCount)
+            if (!TryRemoveCandidatesByAssumption())
             {
-                Debug.Log($"Solver :: 고양이 모두 찾아서 종료");
-                foreach (var pos in foundCatPositions)
-                    Debug.Log($"{pos}");
-                shouldExit = true;
+                Debug.Log($"Solver :: 현재 규칙으로 풀이를 더 이상 진행할 수 없음");
+                return;
             }
-            if (repeatCount > 1000)
-            {
-                Debug.Log($"Solver :: 반복 횟수 초과로 강제 종료");
-                shouldExit = true;
-            }
-        } while (!shouldExit);
+        }
     }
 
     #region Solving Rules
@@ -754,10 +752,80 @@ public class BoardSolver : MonoBehaviour
         return false;
     }
 
-    // 8. 모순 위치 찾기 : 특정 타일에 고양이가 있을 때 모순인지 확인
-    void SolveByAssumption()
+    // 8. 모순 위치 찾기 : 특정 후보가 고양이일 때 모순인지 확인
+    bool TryRemoveCandidatesByAssumption()
     {
-        // todo
+        for (int region = 0; region < totalCatCount; region++)
+        {
+            // 고양이 이미 찾은 영역 제외
+            if (HasFoundCat(region))
+                continue;
+
+            for (int i = 0; i < candidatesPerRegion[region].Count; i++)
+            {
+                List<Vector2Int>[] tempCandidatesPerRegion = new List<Vector2Int>[totalCatCount];
+
+                for (int j = 0; j < totalCatCount; j++)
+                    tempCandidatesPerRegion[j] = new List<Vector2Int>(candidatesPerRegion[j]);
+
+                bool[] tempHasFoundCatPerRegion = new bool[totalCatCount];
+                for (int k = 0; k < tempHasFoundCatPerRegion.Length; k++)
+                    tempHasFoundCatPerRegion[k] = hasFoundCatPerRegion[k];
+
+                Vector2Int target = candidatesPerRegion[region][i];
+
+                // 한 후보를 고양이라고 가정했을 때 모순 발생 -> 해당 후보 제거
+                if (TryFindContradictionByAssumption(tempCandidatesPerRegion, tempHasFoundCatPerRegion, target, region))
+                {
+                    if (logOnFindContradictionCandidate)
+                        Debug.Log($"8. {target} 후보가 모순이라서 제거");
+                    RemoveCandidate(candidatesPerRegion, target);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    bool TryFindContradictionByAssumption(List<Vector2Int>[] candidatesPerRegion, bool[] hasFoundCatPerRegion, Vector2Int catPos, int region)
+    {
+        // 한 후보를 고양이라고 가정
+        AssumeCatPosition(candidatesPerRegion, catPos);
+        hasFoundCatPerRegion[region] = true;
+
+        // 현재 가정으로 모든 고양이 찾기 성공하면 종료
+        bool hasFoundAllCat = true;
+        foreach (var hasFoundCat in hasFoundCatPerRegion)
+            if (!hasFoundCat)
+                hasFoundAllCat = false;
+
+        if (hasFoundAllCat)
+            return false;
+        
+        // 가정 후 다른 영역 확인
+        for (int tempRegion = 0; tempRegion < candidatesPerRegion.Length; tempRegion++)
+        {
+            // 같은 영역이면
+            if (tempRegion == region)
+                continue;
+
+            // 이미 고양이 찾은 영역이면 (기존에 찾았던 영역 + 가정한 영역)
+            if (hasFoundCatPerRegion[tempRegion])
+                continue;
+
+            // 모순 발견(다른 영역 후보를 모두 제거)
+            if (candidatesPerRegion[tempRegion].Count == 0)
+                return true;
+
+            // 다른 영역 후보를 1개만 남기는 후보만
+            if (candidatesPerRegion[tempRegion].Count != 1)
+                continue;
+
+            Vector2Int target = candidatesPerRegion[tempRegion][0];
+
+            return TryFindContradictionByAssumption(candidatesPerRegion, hasFoundCatPerRegion, target, tempRegion);
+        }
+        // 더 이상 연쇄 확인할 후보가 없음 (후보가 1개인 영역이 없음)
+        return false;
     }
 
     #endregion
