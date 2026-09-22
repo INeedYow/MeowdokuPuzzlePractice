@@ -45,7 +45,7 @@ public class BoardSolver : MonoBehaviour
         // 모든 후보를 대상으로 하지 않고, 다른 영역의 후보를 1개로 만드는 후보만 탐색
     // 1->8로 진행하며, 변경점(후보 제거 등)이 있으면 1로 돌아가서 반복 진행
     // 1~8 한 사이클 진행하는 동안 후보의 변경이 없었다면 풀이가 불가능하다고 판단
-    public void Solve(char[,] board, int catCount)
+    public bool Solve(char[,] board, int catCount)
     {
         this.board = board;
         totalCatCount = catCount;
@@ -76,7 +76,7 @@ public class BoardSolver : MonoBehaviour
             if (foundCatPositions.Count == catCount)
             {
                 Debug.Log($"Solver :: 고양이 모두 찾아서 종료 ({catCount} 마리) \n {string.Join(", ", foundCatPositions)}");
-                break;
+                return true;
             }
 
             // 1. 1칸짜리 영역 확정
@@ -104,7 +104,7 @@ public class BoardSolver : MonoBehaviour
             if (!TryRemoveCandidatesByAssumption())
             {
                 Debug.Log($"Solver :: 현재 규칙으로 풀이를 더 이상 진행할 수 없음");
-                return;
+                return false;
             }
         }
     }

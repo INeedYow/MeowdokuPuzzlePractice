@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class BoardGenerator : MonoBehaviour
 {
@@ -14,27 +15,32 @@ public class BoardGenerator : MonoBehaviour
             Debug.LogError($"BoardGenerate Error :: catPositionGenerator is null");
             return null;
         }
-
-        // 고양이 위치 결정
-        var catPositions = catPositionGenerator.Generate(catCount);
-
         if (tileColorGenerator == null)
         {
             Debug.LogError($"BoardGenerate Error :: tileColorGenerator is null");
             return null;
         }
-
-        // 타일 색상 결정
-        var newBoard = tileColorGenerator.Generate(catCount, catPositions);
-
         if (boardSolver == null)
         {
             Debug.LogError($"BoardGenerate Error :: boardSolver is null");
             return null;
         }
 
-        boardSolver.Solve(newBoard, catCount);
+        List<Vector2Int> catPositions;
+        char[,] newBoard;
+        int generateCount = 0;
+        do
+        {
+            generateCount++;
 
+            // 고양이 위치 결정
+            catPositions = catPositionGenerator.Generate(catCount);
+
+            // 타일 색상 결정
+            newBoard = tileColorGenerator.Generate(catCount, catPositions);
+        } while (!boardSolver.Solve(newBoard, catCount));
+
+        Debug.Log($"BoardGenerator :: 풀이 가능한 보드 {generateCount} 회 시도에 생성 완료");
         return newBoard;
     }
 }
