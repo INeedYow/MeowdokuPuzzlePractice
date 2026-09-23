@@ -63,12 +63,17 @@ public class BoardSolver : MonoBehaviour
         {
             for (int x = 0; x < board.GetLength(1); x++)
             {
-                if (RegionUtility.TryGetIndexFromId(board[y, x], out int index))
+                if (RegionUtility.TryGetIndexFromId(board[y, x], out int region))
                 {
-                    candidatesPerRegion[index].Add(new Vector2Int(x, y));
+                    candidatesPerRegion[region].Add(new Vector2Int(x, y));
                 }
             }
         }
+
+        // 디버깅용
+        List<char> singleCandidateRegions = new List<char>();
+        for (int i = 0; i < candidatesPerRegion.Length; i++)
+            if (candidatesPerRegion[i].Count == 1) singleCandidateRegions.Add(RegionUtility.GetIdFromIndex(i));
 
         while (true)
         {
@@ -76,6 +81,7 @@ public class BoardSolver : MonoBehaviour
             if (foundCatPositions.Count == catCount)
             {
                 Debug.Log($"Solver :: 고양이 모두 찾아서 종료 ({catCount} 마리) \n {string.Join(", ", foundCatPositions)}");
+                Debug.Log($"Solver :: 1칸 영역 {singleCandidateRegions.Count}개 / ({string.Join(", ", singleCandidateRegions)})");
                 return true;
             }
 
