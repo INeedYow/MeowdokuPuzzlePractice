@@ -1431,7 +1431,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uACE0\uC591\uC774 \uBC30\uCE58"
+  m_Text: "\uBCF4\uB4DC \uC0DD\uC131"
 --- !u!222 &686945174
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2089,8 +2089,10 @@ MonoBehaviour:
   logOnFindSingleCandidateInLine: 1
   logOnFindSingleRegionInLine: 1
   logOnFindSingleLineInRegion: 1
+  logOnFindContradictionRegion: 1
   logOnFindMultiRegionInLines: 1
   logOnFindMultiLineInRegion: 1
+  logOnFindContradictionCandidate: 1
 --- !u!1 &1555038768
 GameObject:
   m_ObjectHideFlags: 0

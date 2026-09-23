@@ -30,10 +30,18 @@ public class TileColorGenerator : MonoBehaviour
             board[pos.y, pos.x] = char.ToUpper(RegionUtility.GetIdFromIndex(i));
         }
 
-        // 1차로 고양이 타일부터 퍼져나가면서 색상 결정
+        List<int> indexes = new List<int>();
+        for (int i = 0; i < catPositions.Count; i++)
+            indexes.Add(i);
+        // 1차로 고양이 타일부터 퍼져나가면서 색상 결정, 무작위 순서로 결정
         for (int i = 0; i < catPositions.Count; i++)
         {
-            DecideColorFromCat(catPositions[i], RegionUtility.GetIdFromIndex(i));
+            int randomIndex = Random.Range(0, indexes.Count);
+            int index = indexes[randomIndex];
+            
+            indexes.RemoveAt(randomIndex);
+
+            DecideColorFromCat(catPositions[index], RegionUtility.GetIdFromIndex(index));
         }
 
         if (logBoardAfterDecideColorFromCat)
